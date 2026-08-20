@@ -37,3 +37,7 @@ dist/
 # Test / coverage
 .coverage
 htmlcov/
+
+# Pytest temporary files
+.pytest_tmp/
+.pytest_cache/

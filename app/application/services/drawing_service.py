@@ -47,3 +47,28 @@ class DrawingService:
         self.repository.save(
             self.state.current_profile
         )
+
+    def add_page(self):
+        if self.state.mode != ApplicationMode.DRAWING:
+            raise RuntimeError(
+                "Cannot add page outside drawing mode."
+            )
+        if self.state.current_profile is None:
+            raise RuntimeError(
+                "Cannot add page without an active profile."
+            )
+
+        if self.state.current_page is None:
+            raise RuntimeError(
+                "Cannot add page without an active page."
+            )
+
+        page = self.state.current_profile.add_page()
+
+        self.state.current_page = page
+
+        self.repository.save(
+            self.state.current_profile
+        )
+
+        return page

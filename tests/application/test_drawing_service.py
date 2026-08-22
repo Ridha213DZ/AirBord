@@ -73,7 +73,6 @@ def test_drawing_service_adds_stroke_to_current_page():
     assert state.current_page is profile.current_page
     assert state.current_page.stroke_count == 1
     assert state.current_page.strokes[0] is stroke
-
     assert repository.saved_profiles == [profile]
 def test_drawing_service_cannot_add_stroke_outside_drawing_mode():
     repository = SpyProfileRepository()
@@ -126,8 +125,6 @@ def test_drawing_service_cannot_add_stroke_without_active_profile():
         )
 
     assert repository.saved_profiles == []
-
-
 def test_drawing_service_cannot_add_stroke_without_active_page():
     repository = SpyProfileRepository()
 
@@ -157,4 +154,83 @@ def test_drawing_service_cannot_add_stroke_without_active_page():
 
     assert profile.pages
     assert profile.current_page.stroke_count == 0
+    assert repository.saved_profiles == []
+def test_drawing_service_adds_new_page():
+    repository = SpyProfileRepository()
+
+    state = ApplicationState()
+
+    profile = Profile(
+        name="Ridha"
+    )
+
+    state.activate_profile(profile)
+    state.activate_drawing()
+
+    original_page = profile.current_page
+
+    service = DrawingService(
+        state=state,
+        repository=repository,
+    )
+
+    new_page = service.add_page()
+
+    assert new_page is profile.pages[-1]
+    assert new_page is not original_page
+    assert state.current_page is new_page
+    assert len(profile.pages) == 2
+
+    assert repository.saved_profiles == [profile]
+def test_drawing_service_cannot_add_page_outside_drawing_mode():
+    repository = SpyProfileRepository()
+
+    state = ApplicationState()
+
+    profile = Profile(
+        name="Ridha"
+    )
+
+    state.activate_profile(profile)
+
+    service = DrawingService(
+        state=state,
+        repository=repository,
+    )
+
+    try:
+        service.add_page()
+        assert False
+    except RuntimeError as error:
+        assert str(error) == (
+            "Cannot add page outside drawing mode."
+        )
+
+    assert len(profile.pages) == 1
+    assert state.current_page is profile.current_page
+    assert repository.saved_profiles == []
+def test_drawing_service_cannot_add_page_without_active_profile():
+    repository = SpyProfileRepository()
+
+    state = ApplicationState()
+
+    state.mode = ApplicationMode.DRAWING
+    state.current_profile = None
+    state.current_page = None
+
+    service = DrawingService(
+        state=state,
+        repository=repository,
+    )
+
+    try:
+        service.add_page()
+        assert False
+    except RuntimeError as error:
+        assert str(error) == (
+            "Cannot add page without an active profile."
+        )
+
+    assert state.current_profile is None
+    assert state.current_page is None
     assert repository.saved_profiles == []

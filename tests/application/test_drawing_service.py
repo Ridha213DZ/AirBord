@@ -1,3 +1,5 @@
+from uuid import uuid4
+
 from app.application.services.drawing_service import (
     DrawingService,
 )
@@ -74,6 +76,8 @@ def test_drawing_service_adds_stroke_to_current_page():
     assert state.current_page.stroke_count == 1
     assert state.current_page.strokes[0] is stroke
     assert repository.saved_profiles == [profile]
+
+
 def test_drawing_service_cannot_add_stroke_outside_drawing_mode():
     repository = SpyProfileRepository()
 
@@ -82,7 +86,6 @@ def test_drawing_service_cannot_add_stroke_outside_drawing_mode():
     profile = Profile(
         name="Ridha"
     )
-
     state.activate_profile(profile)
 
     stroke = Stroke()
@@ -102,6 +105,8 @@ def test_drawing_service_cannot_add_stroke_outside_drawing_mode():
 
     assert state.current_page.stroke_count == 0
     assert repository.saved_profiles == []
+
+
 def test_drawing_service_cannot_add_stroke_without_active_profile():
     repository = SpyProfileRepository()
 
@@ -125,6 +130,8 @@ def test_drawing_service_cannot_add_stroke_without_active_profile():
         )
 
     assert repository.saved_profiles == []
+
+
 def test_drawing_service_cannot_add_stroke_without_active_page():
     repository = SpyProfileRepository()
 
@@ -155,6 +162,8 @@ def test_drawing_service_cannot_add_stroke_without_active_page():
     assert profile.pages
     assert profile.current_page.stroke_count == 0
     assert repository.saved_profiles == []
+
+
 def test_drawing_service_adds_new_page():
     repository = SpyProfileRepository()
 
@@ -182,6 +191,8 @@ def test_drawing_service_adds_new_page():
     assert len(profile.pages) == 2
 
     assert repository.saved_profiles == [profile]
+
+
 def test_drawing_service_cannot_add_page_outside_drawing_mode():
     repository = SpyProfileRepository()
 
@@ -209,6 +220,8 @@ def test_drawing_service_cannot_add_page_outside_drawing_mode():
     assert len(profile.pages) == 1
     assert state.current_page is profile.current_page
     assert repository.saved_profiles == []
+
+
 def test_drawing_service_cannot_add_page_without_active_profile():
     repository = SpyProfileRepository()
 
@@ -232,5 +245,150 @@ def test_drawing_service_cannot_add_page_without_active_profile():
         )
 
     assert state.current_profile is None
+    assert state.current_page is None
+    assert repository.saved_profiles == []
+
+
+def test_drawing_service_removes_stroke_from_current_page():
+    repository = SpyProfileRepository()
+
+    state = ApplicationState()
+
+    profile = Profile(
+        name="Ridha"
+    )
+
+    state.activate_profile(profile)
+    state.activate_drawing()
+
+    stroke = Stroke()
+
+    state.current_page.add_stroke(stroke)
+
+    service = DrawingService(
+        state=state,
+        repository=repository,
+    )
+
+    removed = service.remove_stroke(
+        stroke.id
+    )
+
+    assert removed is True
+    assert state.current_page.stroke_count == 0
+    assert stroke not in state.current_page.strokes
+    assert repository.saved_profiles == [profile]
+
+
+def test_drawing_service_returns_false_when_stroke_does_not_exist():
+    repository = SpyProfileRepository()
+
+    state = ApplicationState()
+
+    profile = Profile(
+        name="Ridha"
+    )
+
+    state.activate_profile(profile)
+    state.activate_drawing()
+
+    service = DrawingService(
+        state=state,
+        repository=repository,
+    )
+    removed = service.remove_stroke(
+        uuid4()
+    )
+
+    assert removed is False
+    assert state.current_page.stroke_count == 0
+    assert repository.saved_profiles == []
+
+
+def test_drawing_service_cannot_remove_stroke_outside_drawing_mode():
+    repository = SpyProfileRepository()
+
+    state = ApplicationState()
+
+    profile = Profile(
+        name="Ridha"
+    )
+
+    state.activate_profile(profile)
+
+    stroke = Stroke()
+
+    profile.current_page.add_stroke(stroke)
+
+    service = DrawingService(
+        state=state,
+        repository=repository,
+    )
+
+    try:
+        service.remove_stroke(
+            stroke.id
+        )
+        assert False
+    except RuntimeError as error:
+        assert str(error) == (
+            "Cannot remove stroke outside drawing mode."
+        )
+
+    assert profile.current_page.stroke_count == 1
+    assert repository.saved_profiles == []
+
+
+def test_drawing_service_cannot_remove_stroke_without_active_profile():
+    repository = SpyProfileRepository()
+
+    state = ApplicationState()
+
+    state.mode = ApplicationMode.DRAWING
+    state.current_profile = None
+    state.current_page = None
+
+    service = DrawingService(
+        state=state,
+        repository=repository,
+    )
+    try:
+        service.remove_stroke(uuid4())
+        assert False
+    except RuntimeError as error:
+        assert str(error) == (
+            "Cannot remove stroke without an active profile."
+        )
+
+    assert state.current_profile is None
+    assert state.current_page is None
+    assert repository.saved_profiles == []
+
+
+def test_drawing_service_cannot_remove_stroke_without_active_page():
+    repository = SpyProfileRepository()
+
+    state = ApplicationState()
+
+    profile = Profile(
+        name="Ridha"
+    )
+
+    state.mode = ApplicationMode.DRAWING
+    state.current_profile = profile
+    state.current_page = None
+
+    service = DrawingService(
+        state=state,
+        repository=repository,
+    )
+    try:
+        service.remove_stroke(uuid4())
+        assert False
+    except RuntimeError as error:
+        assert str(error) == (
+            "Cannot remove stroke without an active page."
+        )
+    assert state.current_profile is profile
     assert state.current_page is None
     assert repository.saved_profiles == []

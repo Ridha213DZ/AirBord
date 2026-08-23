@@ -1,3 +1,5 @@
+from uuid import UUID
+
 from app.core.enums.application_mode import ApplicationMode
 from app.core.models.application_state import ApplicationState
 from app.core.models.stroke import Stroke
@@ -47,6 +49,41 @@ class DrawingService:
         self.repository.save(
             self.state.current_profile
         )
+
+
+    def remove_stroke(
+        self,
+        stroke_id: UUID,
+    ) -> bool:
+        if self.state.mode != ApplicationMode.DRAWING:
+            raise RuntimeError(
+                "Cannot remove stroke outside drawing mode."
+            )
+
+        if self.state.current_profile is None:
+            raise RuntimeError(
+                "Cannot remove stroke without an active profile."
+            )
+
+        if self.state.current_page is None:
+            raise RuntimeError(
+                "Cannot remove stroke without an active page."
+            )
+
+        removed = self.state.current_page.remove_stroke(
+            stroke_id
+        )
+
+        if not removed:
+            return False
+
+        self.state.current_profile.touch()
+
+        self.repository.save(
+            self.state.current_profile
+        )
+
+        return True
 
     def add_page(self):
         if self.state.mode != ApplicationMode.DRAWING:

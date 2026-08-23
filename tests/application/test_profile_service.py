@@ -1,5 +1,8 @@
 import pytest
 
+from app.core.enums.application_mode import ApplicationMode
+from app.core.models.application_state import ApplicationState
+from app.application.services.profile_service import ProfileService
 from app.core.models.face_identity import FaceIdentity
 from app.core.models.profile import Profile
 
@@ -80,12 +83,9 @@ def repository():
 
 @pytest.fixture
 def service(repository):
-    from app.application.services.profile_service import (
-        ProfileService,
-    )
-
     return ProfileService(
-        repository
+        repository=repository,
+        state=ApplicationState(),
     )
 
 
@@ -280,3 +280,25 @@ def test_assign_face_identity_to_unknown_profile_returns_none(
     )
 
     assert updated is None
+
+
+def test_create_and_activate_profile(
+    repository,
+):
+    state = ApplicationState()
+
+    service = ProfileService(
+        repository=repository,
+        state=state,
+    )
+
+    profile = service.create_and_activate_profile(
+        name="Ridha"
+    )
+
+    assert profile.name == "Ridha"
+    assert repository.exists(profile.id)
+
+    assert state.current_profile is profile
+    assert state.current_page is profile.current_page
+    assert state.mode == ApplicationMode.PROFILE_ACTIVE

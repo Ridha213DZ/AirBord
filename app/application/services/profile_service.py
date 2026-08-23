@@ -1,5 +1,6 @@
 from uuid import UUID
 
+from app.core.models.application_state import ApplicationState
 from app.core.models.face_identity import FaceIdentity
 from app.core.models.profile import Profile
 from app.storage.repositories.profile_repository import (
@@ -18,8 +19,10 @@ class ProfileService:
     def __init__(
         self,
         repository: ProfileRepository,
+        state: ApplicationState,
     ) -> None:
         self.repository = repository
+        self.state = state
 
     def create_profile(
         self,
@@ -103,6 +106,20 @@ class ProfileService:
         profile.touch()
 
         self.repository.save(
+            profile
+        )
+
+        return profile
+
+    def create_and_activate_profile(
+        self,
+        name: str,
+    ) -> Profile:
+        profile = self.create_profile(
+            name
+        )
+
+        self.state.activate_profile(
             profile
         )
 

@@ -2,6 +2,7 @@ from uuid import UUID
 
 from app.core.enums.application_mode import ApplicationMode
 from app.core.models.application_state import ApplicationState
+from app.core.models.page import Page
 from app.core.models.stroke import Stroke
 from app.storage.repositories.profile_repository import (
     ProfileRepository,
@@ -128,6 +129,35 @@ class DrawingService:
         )
 
         return True
+
+    def clear_current_page(self) -> Page:
+        if self.state.mode != ApplicationMode.DRAWING:
+            raise RuntimeError(
+                "Cannot clear current page outside drawing mode."
+            )
+
+        if self.state.current_profile is None:
+            raise RuntimeError(
+                "Cannot clear current page without an active profile."
+            )
+
+        if self.state.current_page is None:
+            raise RuntimeError(
+                "Cannot clear current page without an active page."
+            )
+
+        if self.state.current_page.stroke_count == 0:
+            return self.state.current_page
+
+        self.state.current_page.strokes.clear()
+
+        self.state.current_profile.touch()
+
+        self.repository.save(
+            self.state.current_profile
+        )
+
+        return self.state.current_page
 
     def add_page(self):
         if self.state.mode != ApplicationMode.DRAWING:

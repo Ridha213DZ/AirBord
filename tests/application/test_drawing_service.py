@@ -559,3 +559,153 @@ def test_drawing_service_cannot_update_stroke_without_active_page():
     assert state.current_profile is profile
     assert state.current_page is None
     assert repository.saved_profiles == []
+
+
+def test_drawing_service_clears_current_page():
+    repository = SpyProfileRepository()
+
+    state = ApplicationState()
+
+    profile = Profile(
+        name="Ridha"
+    )
+
+    state.activate_profile(profile)
+    state.activate_drawing()
+
+    page = state.current_page
+
+    stroke_1 = Stroke()
+    stroke_2 = Stroke()
+
+    page.add_stroke(stroke_1)
+    page.add_stroke(stroke_2)
+
+    service = DrawingService(
+        state=state,
+        repository=repository,
+    )
+
+    cleared_page = service.clear_current_page()
+
+    assert cleared_page is page
+    assert state.current_page is page
+    assert page.stroke_count == 0
+    assert page.strokes == []
+    assert repository.saved_profiles == [profile]
+
+
+def test_drawing_service_does_not_save_when_current_page_is_empty():
+    repository = SpyProfileRepository()
+
+    state = ApplicationState()
+
+    profile = Profile(
+        name="Ridha"
+    )
+
+    state.activate_profile(profile)
+    state.activate_drawing()
+
+    page = state.current_page
+
+    service = DrawingService(
+        state=state,
+        repository=repository,
+    )
+
+    cleared_page = service.clear_current_page()
+
+    assert cleared_page is page
+    assert page.stroke_count == 0
+    assert repository.saved_profiles == []
+
+
+def test_drawing_service_cannot_clear_current_page_outside_drawing_mode():
+    repository = SpyProfileRepository()
+
+    state = ApplicationState()
+
+    profile = Profile(
+        name="Ridha"
+    )
+
+    state.activate_profile(profile)
+
+    stroke = Stroke()
+
+    profile.current_page.add_stroke(stroke)
+
+    service = DrawingService(
+        state=state,
+        repository=repository,
+    )
+
+    try:
+        service.clear_current_page()
+        assert False
+    except RuntimeError as error:
+        assert str(error) == (
+            "Cannot clear current page outside drawing mode."
+        )
+
+    assert profile.current_page.stroke_count == 1
+    assert repository.saved_profiles == []
+
+
+def test_drawing_service_cannot_clear_current_page_without_active_profile():
+    repository = SpyProfileRepository()
+
+    state = ApplicationState()
+
+    state.mode = ApplicationMode.DRAWING
+    state.current_profile = None
+    state.current_page = None
+
+    service = DrawingService(
+        state=state,
+        repository=repository,
+    )
+
+    try:
+        service.clear_current_page()
+        assert False
+    except RuntimeError as error:
+        assert str(error) == (
+            "Cannot clear current page without an active profile."
+        )
+
+    assert state.current_profile is None
+    assert state.current_page is None
+    assert repository.saved_profiles == []
+
+
+def test_drawing_service_cannot_clear_current_page_without_active_page():
+    repository = SpyProfileRepository()
+
+    state = ApplicationState()
+
+    profile = Profile(
+        name="Ridha"
+    )
+
+    state.mode = ApplicationMode.DRAWING
+    state.current_profile = profile
+    state.current_page = None
+
+    service = DrawingService(
+        state=state,
+        repository=repository,
+    )
+
+    try:
+        service.clear_current_page()
+        assert False
+    except RuntimeError as error:
+        assert str(error) == (
+            "Cannot clear current page without an active page."
+        )
+
+    assert state.current_profile is profile
+    assert state.current_page is None
+    assert repository.saved_profiles == []

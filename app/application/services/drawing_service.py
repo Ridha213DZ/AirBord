@@ -85,6 +85,50 @@ class DrawingService:
 
         return True
 
+    def update_stroke(
+        self,
+        stroke_id: UUID,
+        color: str,
+        width: float,
+    ) -> bool:
+        if self.state.mode != ApplicationMode.DRAWING:
+            raise RuntimeError(
+                "Cannot update stroke outside drawing mode."
+            )
+
+        if self.state.current_profile is None:
+            raise RuntimeError(
+                "Cannot update stroke without an active profile."
+            )
+
+        if self.state.current_page is None:
+            raise RuntimeError(
+                "Cannot update stroke without an active page."
+            )
+
+        stroke = next(
+            (
+                stroke
+                for stroke in self.state.current_page.strokes
+                if stroke.id == stroke_id
+            ),
+            None,
+        )
+
+        if stroke is None:
+            return False
+
+        stroke.color = color
+        stroke.width = width
+
+        self.state.current_profile.touch()
+
+        self.repository.save(
+            self.state.current_profile
+        )
+
+        return True
+
     def add_page(self):
         if self.state.mode != ApplicationMode.DRAWING:
             raise RuntimeError(

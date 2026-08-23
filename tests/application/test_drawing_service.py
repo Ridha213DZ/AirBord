@@ -392,3 +392,170 @@ def test_drawing_service_cannot_remove_stroke_without_active_page():
     assert state.current_profile is profile
     assert state.current_page is None
     assert repository.saved_profiles == []
+
+
+def test_drawing_service_updates_existing_stroke():
+    repository = SpyProfileRepository()
+
+    state = ApplicationState()
+
+    profile = Profile(
+        name="Ridha"
+    )
+
+    state.activate_profile(profile)
+    state.activate_drawing()
+
+    stroke = Stroke(
+        color="#000000",
+        width=5.0,
+    )
+
+    state.current_page.add_stroke(stroke)
+
+    service = DrawingService(
+        state=state,
+        repository=repository,
+    )
+
+    updated = service.update_stroke(
+        stroke.id,
+        color="#FF0000",
+        width=8.0,
+    )
+
+    assert updated is True
+    assert stroke.color == "#FF0000"
+    assert stroke.width == 8.0
+    assert repository.saved_profiles == [profile]
+
+
+def test_drawing_service_returns_false_when_updating_nonexistent_stroke():
+    repository = SpyProfileRepository()
+
+    state = ApplicationState()
+
+    profile = Profile(
+        name="Ridha"
+    )
+
+    state.activate_profile(profile)
+    state.activate_drawing()
+
+    service = DrawingService(
+        state=state,
+        repository=repository,
+    )
+
+    updated = service.update_stroke(
+        uuid4(),
+        color="#FF0000",
+        width=8.0,
+    )
+
+    assert updated is False
+    assert state.current_page.stroke_count == 0
+    assert repository.saved_profiles == []
+
+
+def test_drawing_service_cannot_update_stroke_outside_drawing_mode():
+    repository = SpyProfileRepository()
+
+    state = ApplicationState()
+
+    profile = Profile(
+        name="Ridha"
+    )
+
+    state.activate_profile(profile)
+
+    stroke = Stroke()
+
+    profile.current_page.add_stroke(stroke)
+
+    service = DrawingService(
+        state=state,
+        repository=repository,
+    )
+
+    try:
+        service.update_stroke(
+            stroke.id,
+            color="#FF0000",
+            width=8.0,
+        )
+        assert False
+    except RuntimeError as error:
+        assert str(error) == (
+            "Cannot update stroke outside drawing mode."
+        )
+
+    assert stroke.color == "#000000"
+    assert stroke.width == 5.0
+    assert repository.saved_profiles == []
+
+
+def test_drawing_service_cannot_update_stroke_without_active_profile():
+    repository = SpyProfileRepository()
+
+    state = ApplicationState()
+
+    state.mode = ApplicationMode.DRAWING
+    state.current_profile = None
+    state.current_page = None
+
+    service = DrawingService(
+        state=state,
+        repository=repository,
+    )
+
+    try:
+        service.update_stroke(
+            uuid4(),
+            color="#FF0000",
+            width=8.0,
+        )
+        assert False
+    except RuntimeError as error:
+        assert str(error) == (
+            "Cannot update stroke without an active profile."
+        )
+
+    assert state.current_profile is None
+    assert state.current_page is None
+    assert repository.saved_profiles == []
+
+
+def test_drawing_service_cannot_update_stroke_without_active_page():
+    repository = SpyProfileRepository()
+
+    state = ApplicationState()
+
+    profile = Profile(
+        name="Ridha"
+    )
+
+    state.mode = ApplicationMode.DRAWING
+    state.current_profile = profile
+    state.current_page = None
+
+    service = DrawingService(
+        state=state,
+        repository=repository,
+    )
+
+    try:
+        service.update_stroke(
+            uuid4(),
+            color="#FF0000",
+            width=8.0,
+        )
+        assert False
+    except RuntimeError as error:
+        assert str(error) == (
+            "Cannot update stroke without an active page."
+        )
+
+    assert state.current_profile is profile
+    assert state.current_page is None
+    assert repository.saved_profiles == []

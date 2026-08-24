@@ -124,3 +124,20 @@ class ProfileService:
         )
 
         return profile
+
+    def activate_profile(
+        self,
+        profile_id: UUID | str,
+    ) -> Profile | None:
+        profile = self.repository.get_by_id(
+            profile_id
+        )
+
+        if profile is None:
+            return None
+
+        self.state.activate_profile(
+            profile
+        )
+
+        return profile

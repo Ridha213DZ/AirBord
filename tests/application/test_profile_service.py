@@ -302,3 +302,56 @@ def test_create_and_activate_profile(
     assert state.current_profile is profile
     assert state.current_page is profile.current_page
     assert state.mode == ApplicationMode.PROFILE_ACTIVE
+
+
+def test_activate_existing_profile(
+    repository,
+):
+    state = ApplicationState()
+
+    profile = Profile(
+        name="Ridha"
+    )
+
+    repository.save(
+        profile
+    )
+
+    service = ProfileService(
+        repository=repository,
+        state=state,
+    )
+
+    activated = service.activate_profile(
+        profile.id
+    )
+
+    assert activated is profile
+
+    assert state.current_profile is profile
+    assert state.current_page is profile.current_page
+
+    assert (
+        state.mode
+        == ApplicationMode.PROFILE_ACTIVE
+    )
+
+
+def test_activate_unknown_profile_returns_none_without_changing_state(
+    repository,
+):
+    state = ApplicationState()
+
+    service = ProfileService(
+        repository=repository,
+        state=state,
+    )
+
+    activated = service.activate_profile(
+        "unknown-profile"
+    )
+
+    assert activated is None
+    assert state.current_profile is None
+    assert state.current_page is None
+    assert state.mode == ApplicationMode.IDLE

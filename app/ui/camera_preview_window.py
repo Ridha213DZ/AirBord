@@ -12,6 +12,7 @@ class CameraPreviewWindow(QWidget):
         face_detector=None,
         face_recognition=None,
         identities=None,
+        face_profile_service=None,
     ):
         super().__init__()
 
@@ -19,6 +20,7 @@ class CameraPreviewWindow(QWidget):
         self.face_detector = face_detector
         self.face_recognition = face_recognition
         self.identities = identities or []
+        self.face_profile_service = face_profile_service
 
         self.preview = CameraPreview()
 
@@ -40,7 +42,15 @@ class CameraPreviewWindow(QWidget):
         if self.face_detector is not None:
             faces = self.face_detector.detect(frame)
 
-        if self.face_recognition is not None:
+        if self.face_profile_service is not None:
+            results = self.face_profile_service.process(
+                frame=frame,
+                faces=faces,
+            )
+
+            self.preview.set_recognition_results(results)
+
+        elif self.face_recognition is not None:
             results = self.face_recognition.recognize(
                 frame=frame,
                 faces=faces,

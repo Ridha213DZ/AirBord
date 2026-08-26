@@ -141,3 +141,20 @@ class ProfileService:
         )
 
         return profile
+
+    def activate_profile_by_face_identity(
+        self,
+        face_identity_id: UUID | str,
+    ) -> Profile | None:
+        for profile in self.repository.get_all():
+            if (
+                profile.face_identity is not None
+                and profile.face_identity.id == UUID(str(face_identity_id))
+            ):
+                self.state.activate_profile(
+                    profile
+                )
+
+                return profile
+
+        return None

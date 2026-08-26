@@ -163,7 +163,6 @@ def test_vision_frame():
 
     assert frame.frame_size.width == 640
     assert frame.frame_size.height == 480
-    assert not frame.face_detected
     assert not frame.hand_detected
 
 

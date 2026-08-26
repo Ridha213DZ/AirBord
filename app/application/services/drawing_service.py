@@ -159,6 +159,55 @@ class DrawingService:
 
         return self.state.current_page
 
+
+    def remove_current_page(self) -> Page:
+        if self.state.mode != ApplicationMode.DRAWING:
+            raise RuntimeError(
+                "Cannot remove current page outside drawing mode."
+            )
+
+        if self.state.current_profile is None:
+            raise RuntimeError(
+                "Cannot remove current page without an active profile."
+            )
+
+        if self.state.current_page is None:
+            raise RuntimeError(
+                "Cannot remove current page without an active page."
+            )
+
+        if len(self.state.current_profile.pages) <= 1:
+            page = self.state.current_page
+
+            if page.stroke_count == 0:
+                return page
+
+            page.strokes.clear()
+            page.touch()
+
+            self.state.current_profile.touch()
+
+            self.repository.save(
+                self.state.current_profile
+            )
+
+            return page
+
+        removed_page = self.state.current_profile.pages.pop()
+
+        self.state.current_page = (
+            self.state.current_profile.current_page
+        )
+
+        self.state.current_profile.touch()
+
+        self.repository.save(
+            self.state.current_profile
+        )
+
+        return removed_page
+
+
     def add_page(self):
         if self.state.mode != ApplicationMode.DRAWING:
             raise RuntimeError(

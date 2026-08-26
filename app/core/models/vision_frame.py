@@ -14,8 +14,6 @@ class VisionFrame:
 
     frame_size: FrameSize
 
-    face_detected: bool = False
-
     hand_detected: bool = False
 
     hand_landmarks: list[tuple[float, float]] | None = None

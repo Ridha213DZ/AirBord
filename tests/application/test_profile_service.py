@@ -355,3 +355,83 @@ def test_activate_unknown_profile_returns_none_without_changing_state(
     assert state.current_profile is None
     assert state.current_page is None
     assert state.mode == ApplicationMode.IDLE
+
+
+def test_activate_profile_by_face_identity(
+    repository,
+):
+    state = ApplicationState()
+
+    face_identity = FaceIdentity(
+        embedding=[
+            0.1,
+            0.2,
+            0.3,
+        ]
+    )
+
+    profile = Profile(
+        name="Ridha",
+        face_identity=face_identity,
+    )
+
+    repository.save(
+        profile
+    )
+
+    service = ProfileService(
+        repository=repository,
+        state=state,
+    )
+
+    activated = service.activate_profile_by_face_identity(
+        face_identity.id
+    )
+
+    assert activated is profile
+    assert state.current_profile is profile
+    assert state.current_page is profile.current_page
+    assert state.mode == ApplicationMode.PROFILE_ACTIVE
+
+
+def test_activate_profile_by_unknown_face_identity_returns_none_without_changing_state(
+    repository,
+):
+    state = ApplicationState()
+
+    profile = Profile(
+        name="Ridha",
+        face_identity=FaceIdentity(
+            embedding=[
+                0.1,
+                0.2,
+                0.3,
+            ]
+        ),
+    )
+
+    repository.save(
+        profile
+    )
+
+    service = ProfileService(
+        repository=repository,
+        state=state,
+    )
+
+    unknown_face_identity = FaceIdentity(
+        embedding=[
+            0.9,
+            0.8,
+            0.7,
+        ]
+    )
+
+    activated = service.activate_profile_by_face_identity(
+        unknown_face_identity.id
+    )
+
+    assert activated is None
+    assert state.current_profile is None
+    assert state.current_page is None
+    assert state.mode == ApplicationMode.IDLE

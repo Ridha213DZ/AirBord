@@ -1,5 +1,7 @@
 from uuid import uuid4
 
+import pytest
+
 from app.application.services.drawing_service import (
     DrawingService,
 )
@@ -708,4 +710,119 @@ def test_drawing_service_cannot_clear_current_page_without_active_page():
 
     assert state.current_profile is profile
     assert state.current_page is None
+    assert repository.saved_profiles == []
+
+
+def test_drawing_service_removes_current_page_when_multiple_pages_exist():
+    repository = SpyProfileRepository()
+
+    state = ApplicationState()
+
+    profile = Profile(
+        name="Ridha"
+    )
+
+    state.activate_profile(profile)
+    state.activate_drawing()
+
+    first_page = state.current_page
+    second_page = profile.add_page()
+
+    state.current_page = second_page
+
+    service = DrawingService(
+        state=state,
+        repository=repository,
+    )
+
+    removed_page = service.remove_current_page()
+
+    assert removed_page is second_page
+    assert profile.pages == [first_page]
+    assert state.current_page is first_page
+    assert repository.saved_profiles == [profile]
+
+
+def test_drawing_service_clears_current_page_when_it_is_the_only_page():
+    repository = SpyProfileRepository()
+
+    state = ApplicationState()
+
+    profile = Profile(
+        name="Ridha"
+    )
+
+    state.activate_profile(profile)
+    state.activate_drawing()
+
+    page = state.current_page
+
+    stroke = Stroke()
+
+    page.add_stroke(stroke)
+
+    service = DrawingService(
+        state=state,
+        repository=repository,
+    )
+
+    removed_page = service.remove_current_page()
+
+    assert removed_page is page
+    assert profile.pages == [page]
+    assert state.current_page is page
+    assert page.stroke_count == 0
+    assert repository.saved_profiles == [profile]
+
+
+def test_drawing_service_cannot_remove_current_page_outside_drawing_mode():
+    repository = SpyProfileRepository()
+
+    state = ApplicationState()
+
+    profile = Profile(
+        name="Ridha"
+    )
+
+    state.activate_profile(profile)
+
+    service = DrawingService(
+        state=state,
+        repository=repository,
+    )
+
+    with pytest.raises(
+        RuntimeError,
+        match="Cannot remove current page outside drawing mode.",
+    ):
+        service.remove_current_page()
+
+    assert repository.saved_profiles == []
+
+
+def test_drawing_service_cannot_remove_current_page_without_active_page():
+    repository = SpyProfileRepository()
+
+    state = ApplicationState()
+
+    profile = Profile(
+        name="Ridha"
+    )
+
+    state.activate_profile(profile)
+    state.activate_drawing()
+
+    state.current_page = None
+
+    service = DrawingService(
+        state=state,
+        repository=repository,
+    )
+
+    with pytest.raises(
+        RuntimeError,
+        match="Cannot remove current page without an active page.",
+    ):
+        service.remove_current_page()
+
     assert repository.saved_profiles == []

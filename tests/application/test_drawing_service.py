@@ -41,6 +41,25 @@ class SpyProfileRepository(ProfileRepository):
     def exists(self, profile_id):
         return False
 
+def create_drawing_service():
+    repository = SpyProfileRepository()
+
+    state = ApplicationState()
+
+    profile = Profile(
+        name="Ridha"
+    )
+
+    state.activate_profile(profile)
+    state.activate_drawing()
+
+    service = DrawingService(
+        state=state,
+        repository=repository,
+    )
+
+    return service, state, repository
+
 
 def test_drawing_service_adds_stroke_to_current_page():
     repository = SpyProfileRepository()
@@ -132,6 +151,18 @@ def test_drawing_service_cannot_add_stroke_without_active_profile():
         )
 
     assert repository.saved_profiles == []
+
+
+def test_drawing_service_cannot_go_to_previous_page_without_active_page():
+    service, state, repository = create_drawing_service()
+
+    state.current_page = None
+
+    with pytest.raises(
+        RuntimeError,
+        match="Cannot navigate pages without an active page.",
+    ):
+        service.go_to_previous_page()
 
 
 def test_drawing_service_cannot_add_stroke_without_active_page():
@@ -826,3 +857,275 @@ def test_drawing_service_cannot_remove_current_page_without_active_page():
         service.remove_current_page()
 
     assert repository.saved_profiles == []
+
+
+def test_drawing_service_cannot_go_before_first_page():
+    service, state, repository = create_drawing_service()
+
+    first_page = state.current_page
+
+    moved_page = service.go_to_previous_page()
+
+    assert moved_page is None
+    assert state.current_page is first_page
+    assert state.current_profile.current_page_index == 0
+    assert repository.saved_profiles == []
+
+
+def test_drawing_service_cannot_go_after_last_page():
+    service, state, repository = create_drawing_service()
+
+    first_page = state.current_page
+    second_page = service.add_page()
+
+    repository.saved_profiles.clear()
+
+    moved_page = service.go_to_next_page()
+
+    assert moved_page is None
+    assert state.current_page is second_page
+    assert state.current_profile.current_page_index == 1
+    assert state.current_page is not first_page
+    assert repository.saved_profiles == []
+
+
+def test_drawing_service_goes_to_previous_page():
+    service, state, repository = create_drawing_service()
+
+    first_page = state.current_page
+    second_page = service.add_page()
+
+    repository.saved_profiles.clear()
+
+    moved_page = service.go_to_previous_page()
+
+    assert moved_page is first_page
+    assert state.current_page is first_page
+    assert state.current_profile.current_page_index == 0
+    assert repository.saved_profiles == [
+        state.current_profile
+    ]
+
+
+def test_drawing_service_goes_to_next_page():
+    service, state, repository = create_drawing_service()
+
+    first_page = state.current_page
+    second_page = service.add_page()
+
+    service.go_to_previous_page()
+
+    repository.saved_profiles.clear()
+
+    moved_page = service.go_to_next_page()
+
+    assert moved_page is second_page
+    assert state.current_page is second_page
+    assert state.current_profile.current_page_index == 1
+    assert state.current_page is not first_page
+    assert repository.saved_profiles == [
+        state.current_profile
+    ]
+
+
+def test_drawing_service_cannot_go_to_previous_page_outside_drawing_mode():
+    service, state, repository = create_drawing_service()
+
+    state.mode = ApplicationMode.IDLE
+
+    with pytest.raises(
+        RuntimeError,
+        match="Cannot navigate pages outside drawing mode.",
+    ):
+        service.go_to_previous_page()
+
+    assert repository.saved_profiles == []
+
+
+def test_drawing_service_cannot_go_to_next_page_outside_drawing_mode():
+    service, state, repository = create_drawing_service()
+
+    state.mode = ApplicationMode.IDLE
+
+    with pytest.raises(
+        RuntimeError,
+        match="Cannot navigate pages outside drawing mode.",
+    ):
+        service.go_to_next_page()
+
+    assert repository.saved_profiles == []
+
+
+def test_drawing_service_cannot_go_to_previous_page_without_active_profile():
+    service, state, repository = create_drawing_service()
+
+    state.current_profile = None
+    state.current_page = None
+
+    with pytest.raises(
+        RuntimeError,
+        match="Cannot navigate pages without an active profile.",
+    ):
+        service.go_to_previous_page()
+
+    assert repository.saved_profiles == []
+
+
+def test_drawing_service_cannot_go_to_next_page_without_active_profile():
+    service, state, repository = create_drawing_service()
+
+    state.current_profile = None
+    state.current_page = None
+
+    with pytest.raises(
+        RuntimeError,
+        match="Cannot navigate pages without an active profile.",
+    ):
+        service.go_to_next_page()
+
+    assert repository.saved_profiles == []
+
+
+def test_drawing_service_cannot_go_to_next_page_without_active_page():
+    service, state, repository = create_drawing_service()
+
+    state.current_page = None
+
+    with pytest.raises(
+        RuntimeError,
+        match="Cannot navigate pages without an active page.",
+    ):
+        service.go_to_next_page()
+
+    assert repository.saved_profiles == []
+
+
+def test_drawing_service_removes_current_middle_page():
+    service, state, repository = create_drawing_service()
+
+    first_page = state.current_page
+    second_page = service.add_page()
+    third_page = service.add_page()
+
+    service.go_to_previous_page()
+
+    assert state.current_page is second_page
+
+    repository.saved_profiles.clear()
+
+    removed_page = service.remove_current_page()
+
+    assert removed_page is second_page
+    assert state.current_profile.pages == [
+        first_page,
+        third_page,
+    ]
+    assert state.current_profile.current_page_index == 1
+    assert state.current_page is third_page
+    assert repository.saved_profiles == [
+        state.current_profile
+    ]
+
+
+def test_drawing_service_removes_current_last_page():
+    service, state, repository = create_drawing_service()
+
+    first_page = state.current_page
+    second_page = service.add_page()
+    third_page = service.add_page()
+
+    assert state.current_page is third_page
+
+    repository.saved_profiles.clear()
+
+    removed_page = service.remove_current_page()
+
+    assert removed_page is third_page
+    assert state.current_page is second_page
+    assert state.current_page is not first_page
+    assert state.current_profile.current_page_index == 1
+    assert len(state.current_profile.pages) == 2
+    assert repository.saved_profiles == [
+        state.current_profile
+    ]
+
+
+def test_drawing_service_remove_last_page_updates_current_page_index():
+    service, state, repository = create_drawing_service()
+
+    first_page = state.current_page
+    second_page = service.add_page()
+
+    assert state.current_page is second_page
+    assert state.current_profile.current_page_index == 1
+
+    removed_page = service.remove_current_page()
+
+    assert removed_page is second_page
+    assert state.current_profile.current_page_index == 0
+    assert state.current_page is first_page
+
+
+def test_drawing_service_saves_profile_after_previous_page_navigation():
+    service, state, repository = create_drawing_service()
+
+    service.add_page()
+
+    repository.saved_profiles.clear()
+
+    service.go_to_previous_page()
+
+    assert repository.saved_profiles == [
+        state.current_profile
+    ]
+
+
+def test_drawing_service_saves_profile_after_next_page_navigation():
+    service, state, repository = create_drawing_service()
+
+    service.add_page()
+
+    service.go_to_previous_page()
+
+    repository.saved_profiles.clear()
+
+    service.go_to_next_page()
+
+    assert repository.saved_profiles == [
+        state.current_profile
+    ]
+
+
+def test_drawing_service_add_page_updates_current_page_index():
+    service, state, repository = create_drawing_service()
+
+    assert state.current_profile.current_page_index == 0
+
+    service.add_page()
+
+    assert state.current_profile.current_page_index == 1
+
+
+def test_drawing_service_remove_last_page_activates_previous_page():
+    service, state, repository = create_drawing_service()
+
+    first_page = state.current_page
+    second_page = service.add_page()
+    third_page = service.add_page()
+
+    repository.saved_profiles.clear()
+
+    removed_page = service.remove_current_page()
+
+    assert removed_page is third_page
+    assert state.current_page is second_page
+    assert state.current_profile.current_page_index == 1
+
+
+def test_drawing_service_add_page_creates_empty_page():
+    service, state, repository = create_drawing_service()
+
+    new_page = service.add_page()
+
+    assert new_page.strokes == []
+    assert new_page.stroke_count == 0

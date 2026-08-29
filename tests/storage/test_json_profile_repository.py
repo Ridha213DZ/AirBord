@@ -218,3 +218,60 @@ def test_delete_unknown_profile_returns_false(
     )
 
     assert deleted is False
+
+
+def test_get_all_returns_empty_list_when_storage_file_contains_invalid_json(
+    tmp_path,
+):
+    storage_file = tmp_path / "profiles.json"
+
+    storage_file.write_text(
+        "{ invalid json",
+        encoding="utf-8",
+    )
+
+    repository = JsonProfileRepository(
+        storage_file=storage_file,
+    )
+
+    profiles = repository.get_all()
+
+    assert profiles == []
+
+
+def test_get_all_returns_empty_list_when_storage_file_contains_non_list_json(
+    tmp_path,
+):
+    storage_file = tmp_path / "profiles.json"
+
+    storage_file.write_text(
+        '{"profiles": []}',
+        encoding="utf-8",
+    )
+
+    repository = JsonProfileRepository(
+        storage_file=storage_file,
+    )
+
+    profiles = repository.get_all()
+
+    assert profiles == []
+
+
+def test_get_all_returns_empty_list_when_storage_file_contains_non_list_json(
+    tmp_path,
+):
+    storage_file = tmp_path / "profiles.json"
+
+    storage_file.write_text(
+        '{"profiles": []}',
+        encoding="utf-8",
+    )
+
+    repository = JsonProfileRepository(
+        storage_file=storage_file,
+    )
+
+    profiles = repository.get_all()
+
+    assert profiles == []

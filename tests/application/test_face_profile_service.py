@@ -257,3 +257,98 @@ def test_face_profile_service_activates_profile_through_profile_service():
         profile_service.received_face_identity_id
         == identity.id
     )
+
+
+def test_face_profile_service_continues_after_unactivatable_recognized_face():
+    repository = FakeProfileRepository()
+    state = ApplicationState()
+
+    first_identity = FaceIdentity(
+        embedding=[0.1, 0.2, 0.3],
+    )
+
+    second_identity = FaceIdentity(
+        embedding=[0.4, 0.5, 0.6],
+    )
+
+    first_profile = Profile(
+        name="First",
+        face_identity=first_identity,
+    )
+
+    second_profile = Profile(
+        name="Second",
+        face_identity=second_identity,
+    )
+
+    repository.profiles.extend(
+        [
+            first_profile,
+            second_profile,
+        ]
+    )
+
+    class MultipleResultRecognition:
+
+        def recognize(
+            self,
+            frame,
+            faces,
+            identities,
+        ):
+            class Result:
+
+                def __init__(
+                    self,
+                    identity,
+                ):
+                    self.identity = identity
+
+            return [
+                Result(first_identity),
+                Result(second_identity),
+            ]
+
+    class SelectiveProfileService(FakeProfileService):
+
+        def activate_profile_by_face_identity(
+            self,
+            face_identity_id,
+        ):
+            self.received_face_identity_id = (
+                face_identity_id
+            )
+
+            if face_identity_id == second_identity.id:
+                self.state.activate_profile(
+                    second_profile
+                )
+
+                return second_profile
+
+            return None
+
+    recognition = MultipleResultRecognition()
+
+    profile_service = SelectiveProfileService(
+        state=state,
+    )
+
+    service = FaceProfileService(
+        repository=repository,
+        state=state,
+        recognition=recognition,
+        profile_service=profile_service,
+    )
+
+    service.process(
+        frame=object(),
+        faces=[object()],
+    )
+
+    assert state.current_profile is second_profile
+    assert state.current_page is second_profile.current_page
+    assert (
+        profile_service.received_face_identity_id
+        == second_identity.id
+    )

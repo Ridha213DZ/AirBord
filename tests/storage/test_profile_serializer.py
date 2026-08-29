@@ -134,6 +134,8 @@ def test_serialized_profile_contains_required_fields():
 
     assert "pages" in data
 
+    assert "current_page_index" in data
+
     assert "created_at" in data
 
     assert "updated_at" in data
@@ -510,4 +512,72 @@ def test_complete_profile_round_trip():
         restored.face_identity.embedding
         ==
         original.face_identity.embedding
+    )
+
+
+def test_deserialized_profile_preserves_current_page_index():
+    from app.storage.serializers.profile_serializer import (
+        ProfileSerializer,
+    )
+
+    profile = Profile(
+        name="Ridha"
+    )
+
+    profile.add_page()
+    profile.add_page()
+
+    profile.move_to_previous_page()
+
+    data = ProfileSerializer.to_dict(
+        profile
+    )
+
+    restored = ProfileSerializer.from_dict(
+        data
+    )
+
+    assert (
+        restored.current_page_index
+        == profile.current_page_index
+    )
+
+    assert (
+        restored.current_page.id
+        == profile.current_page.id
+    )
+
+def test_profile_serializer_uses_last_page_for_legacy_profile_without_current_page_index():
+
+    from app.storage.serializers.profile_serializer import (
+        ProfileSerializer,
+    )
+
+    profile = Profile(
+        name="Legacy",
+        pages=[
+            Page(),
+            Page(),
+        ],
+    )
+
+    expected_current_page_id = (
+        profile.pages[-1].id
+    )
+
+    data = ProfileSerializer.to_dict(
+        profile
+    )
+
+    data.pop(
+        "current_page_index"
+    )
+
+    restored = ProfileSerializer.from_dict(
+        data
+    )
+
+    assert (
+        restored.current_page.id
+        == expected_current_page_id
     )

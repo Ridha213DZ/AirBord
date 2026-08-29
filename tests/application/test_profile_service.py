@@ -1,5 +1,10 @@
 import pytest
+from uuid import UUID
 
+
+from app.storage.json_profile_repository import (
+    JsonProfileRepository,
+)
 from app.core.enums.application_mode import ApplicationMode
 from app.core.models.application_state import ApplicationState
 from app.application.services.profile_service import ProfileService
@@ -435,3 +440,178 @@ def test_activate_profile_by_unknown_face_identity_returns_none_without_changing
     assert state.current_profile is None
     assert state.current_page is None
     assert state.mode == ApplicationMode.IDLE
+
+
+def test_activate_profile_by_face_identity_ignores_profiles_without_face_identity(
+    service,
+    repository,
+):
+    profile_without_face = Profile(
+        name="Without Face",
+    )
+
+    target_profile = Profile(
+        name="Target",
+        face_identity=FaceIdentity(
+            id=UUID(
+                "11111111-1111-1111-1111-111111111111"
+            ),
+        ),
+    )
+
+    repository.save(
+        profile_without_face
+    )
+
+    repository.save(
+        target_profile
+    )
+
+    activated_profile = service.activate_profile_by_face_identity(
+        UUID(
+            "11111111-1111-1111-1111-111111111111"
+        )
+    )
+
+    assert activated_profile is target_profile
+    assert service.state.current_profile is target_profile
+
+
+def test_rename_profile_updates_updated_at(
+    service,
+):
+    profile = service.create_profile(
+        name="Ridha"
+    )
+
+    original_updated_at = (
+        profile.updated_at
+    )
+
+    updated = service.rename_profile(
+        profile.id,
+        "Ridha Berrehouma",
+    )
+
+    assert updated is not None
+    assert (
+        updated.updated_at
+        > original_updated_at
+    )
+
+
+def test_assign_face_identity_updates_updated_at(
+    service,
+):
+    profile = service.create_profile(
+        name="Ridha"
+    )
+
+    original_updated_at = (
+        profile.updated_at
+    )
+
+    face_identity = FaceIdentity(
+        embedding=[
+            0.1,
+            0.2,
+            0.3,
+        ]
+    )
+
+    updated = service.assign_face_identity(
+        profile.id,
+        face_identity,
+    )
+
+    assert updated is not None
+    assert (
+        updated.updated_at
+        > original_updated_at
+    )
+
+
+def test_profile_service_persists_profile_through_json_repository(
+    tmp_path,
+):
+    storage_file = tmp_path / "profiles.json"
+
+    repository = JsonProfileRepository(
+        storage_file=storage_file,
+    )
+
+    service = ProfileService(
+        repository=repository,
+        state=ApplicationState(),
+    )
+
+    created = service.create_profile(
+        name="Ridha",
+    )
+
+    new_service = ProfileService(
+        repository=repository,
+        state=ApplicationState(),
+    )
+
+    loaded = new_service.get_profile(
+        created.id,
+    )
+
+    assert loaded is not None
+    assert loaded.id == created.id
+    assert loaded.name == "Ridha"
+
+
+def test_profile_service_persists_face_identity_through_json_repository(
+    tmp_path,
+):
+    storage_file = tmp_path / "profiles.json"
+
+    repository = JsonProfileRepository(
+        storage_file=storage_file,
+    )
+
+    service = ProfileService(
+        repository=repository,
+        state=ApplicationState(),
+    )
+
+    profile = service.create_profile(
+        name="Ridha",
+    )
+
+    face_identity = FaceIdentity(
+        embedding=[
+            0.1,
+            0.2,
+            0.3,
+        ],
+        image_path="profiles/ridha.jpg",
+    )
+
+    service.assign_face_identity(
+        profile.id,
+        face_identity,
+    )
+
+    new_service = ProfileService(
+        repository=repository,
+        state=ApplicationState(),
+    )
+
+    loaded = new_service.get_profile(
+        profile.id,
+    )
+
+    assert loaded is not None
+    assert loaded.face_identity is not None
+    assert loaded.face_identity.id == face_identity.id
+    assert loaded.face_identity.embedding == [
+        0.1,
+        0.2,
+        0.3,
+    ]
+    assert loaded.face_identity.image_path == (
+        "profiles/ridha.jpg"
+    )

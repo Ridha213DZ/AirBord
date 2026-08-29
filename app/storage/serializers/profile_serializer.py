@@ -38,6 +38,7 @@ class ProfileSerializer:
                 cls._page_to_dict(page)
                 for page in profile.pages
             ],
+            "current_page_index": profile.current_page_index,
             "created_at": profile.created_at.isoformat(),
             "updated_at": profile.updated_at.isoformat(),
         }
@@ -81,6 +82,10 @@ class ProfileSerializer:
             ),
             face_identity=face_identity,
             pages=pages,
+            current_page_index=data.get(
+                "current_page_index",
+                len(pages) - 1,
+            ),
             created_at=cls._parse_datetime(
                 data["created_at"]
             ),

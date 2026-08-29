@@ -193,13 +193,13 @@ class DrawingService:
 
             return page
 
-        removed_page = self.state.current_profile.pages.pop()
+        removed_page = (
+            self.state.current_profile.remove_current_page()
+        )
 
         self.state.current_page = (
             self.state.current_profile.current_page
         )
-
-        self.state.current_profile.touch()
 
         self.repository.save(
             self.state.current_profile
@@ -232,3 +232,74 @@ class DrawingService:
         )
 
         return page
+
+
+    def go_to_previous_page(self) -> Page | None:
+        if self.state.mode != ApplicationMode.DRAWING:
+            raise RuntimeError(
+               "Cannot navigate pages outside drawing mode."
+            )
+
+        if self.state.current_profile is None:
+                raise RuntimeError(
+                    "Cannot navigate pages without an active profile."
+                )
+
+        if self.state.current_page is None:
+                raise RuntimeError(
+                    "Cannot navigate pages without an active page."
+                )
+
+        if self.state.current_profile.current_page_index == 0:
+                return None
+
+        self.state.current_profile.move_to_previous_page()
+
+        moved_page = (
+            self.state.current_profile.current_page
+        )
+
+        self.state.current_page = moved_page
+
+        self.repository.save(
+            self.state.current_profile
+        )
+
+        return moved_page
+
+
+    def go_to_next_page(self) -> Page | None:
+        if self.state.mode != ApplicationMode.DRAWING:
+            raise RuntimeError(
+                "Cannot navigate pages outside drawing mode."
+            )
+
+        if self.state.current_profile is None:
+            raise RuntimeError(
+                "Cannot navigate pages without an active profile."
+            )
+
+        if self.state.current_page is None:
+            raise RuntimeError(
+                "Cannot navigate pages without an active page."
+            )
+
+        if (
+            self.state.current_profile.current_page_index
+            >= len(self.state.current_profile.pages) - 1
+        ):
+            return None
+
+        self.state.current_profile.move_to_next_page()
+
+        moved_page = (
+            self.state.current_profile.current_page
+        )
+
+        self.state.current_page = moved_page
+
+        self.repository.save(
+            self.state.current_profile
+        )
+
+        return moved_page

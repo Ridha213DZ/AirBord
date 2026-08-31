@@ -41,6 +41,9 @@ class DrawingService:
                 "Cannot draw without an active page."
             )
 
+        if stroke.is_empty():
+            return
+
         self.state.current_page.add_stroke(
             stroke
         )

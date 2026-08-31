@@ -1129,3 +1129,14 @@ def test_drawing_service_add_page_creates_empty_page():
 
     assert new_page.strokes == []
     assert new_page.stroke_count == 0
+
+
+def test_drawing_service_does_not_add_empty_stroke():
+    service, state, repository = create_drawing_service()
+
+    stroke = Stroke()
+
+    service.add_stroke(stroke)
+
+    assert state.current_page.stroke_count == 0
+    assert repository.saved_profiles == []

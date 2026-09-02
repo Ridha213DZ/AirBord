@@ -10,10 +10,7 @@ class CameraFrameSource:
 
     @classmethod
     def open(cls, device: int = 0):
-        capture = cv2.VideoCapture(
-            device,
-            cv2.CAP_V4L2,
-        )
+        capture = cv2.VideoCapture(device)
 
         return cls(capture)
 

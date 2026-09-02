@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from uuid import UUID, uuid4
 
 from app.core.models.stroke import Stroke
@@ -42,7 +42,12 @@ class Page:
         return changed
 
     def touch(self) -> None:
-        self.updated_at = datetime.now(timezone.utc)
+        now = datetime.now(timezone.utc)
+
+        if now <= self.updated_at:
+            now = self.updated_at + timedelta(microseconds=1)
+
+        self.updated_at = now
 
     @property
     def stroke_count(self) -> int:

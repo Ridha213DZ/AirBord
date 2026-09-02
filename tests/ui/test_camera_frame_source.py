@@ -56,9 +56,8 @@ def test_camera_frame_source_can_open_opencv_camera(monkeypatch):
     created = {}
 
     class FakeVideoCapture:
-        def __init__(self, device, backend):
+        def __init__(self, device):
             created["device"] = device
-            created["backend"] = backend
 
     monkeypatch.setattr(
         cv2,
@@ -71,5 +70,4 @@ def test_camera_frame_source_can_open_opencv_camera(monkeypatch):
     )
 
     assert created["device"] == 0
-    assert created["backend"] == cv2.CAP_V4L2
     assert isinstance(source.capture, FakeVideoCapture)

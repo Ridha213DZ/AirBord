@@ -22,3 +22,4 @@ python-dateutil==2.9.0.post0
 shiboken6==6.11.1
 six==1.17.0
 sounddevice==0.5.6
+pytest==9.1.1

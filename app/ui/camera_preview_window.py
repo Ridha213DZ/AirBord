@@ -16,6 +16,7 @@ class CameraPreviewWindow(QWidget):
         face_profile_service=None,
         application_state=None,
         hand_gesture_pipeline=None,
+        hand_gesture_controller=None,
     ):
         super().__init__()
 
@@ -28,6 +29,9 @@ class CameraPreviewWindow(QWidget):
         self.application_state = application_state
         self.hand_gesture_pipeline = (
             hand_gesture_pipeline
+        )
+        self.hand_gesture_controller = (
+            hand_gesture_controller
         )
 
         self.preview = CameraPreview()
@@ -51,9 +55,17 @@ class CameraPreviewWindow(QWidget):
             == ApplicationMode.DRAWING
         ):
             if self.hand_gesture_pipeline is not None:
-                self.hand_gesture_pipeline.process(
+                event = self.hand_gesture_pipeline.process(
                     frame
                 )
+
+                if (
+                    event is not None
+                    and self.hand_gesture_controller is not None
+                ):
+                    self.hand_gesture_controller.handle(
+                        event
+                    )
 
             self.preview.set_frame(frame)
 

@@ -1,3 +1,6 @@
+from app.application.canvas_coordinate_mapper import (
+    CanvasCoordinateMapper,
+)
 from app.application.services.drawing_service import DrawingService
 from app.application.services.hand_gesture_controller import (
     HandGestureController,
@@ -13,8 +16,8 @@ from app.core.models.application_state import ApplicationState
 from app.core.models.hand_gesture_event import HandGestureEvent
 from app.core.models.point import Point
 from app.core.models.profile import Profile
-from app.storage.repositories.profile_repository import ProfileRepository
 
+from app.storage.repositories.profile_repository import ProfileRepository
 
 def test_fist_in_canvas_zone_starts_drawing():
     action_handler = InteractionActionHandler()
@@ -391,4 +394,146 @@ def test_multiple_fist_positions_are_saved_as_one_stroke():
     assert state.current_page.stroke_count == 1
     assert state.current_page.strokes[0].points == points
     assert repository.saved_profiles == [profile]
-    
+
+
+def test_controller_passes_canvas_local_position_to_action_handler():
+    action_handler = InteractionActionHandler()
+
+    controller = HandGestureController(
+        screen_width=1920,
+        screen_height=1080,
+        action_handler=action_handler,
+    )
+
+    canvas_position = Point(
+        x=672.0,
+        y=378.0,
+    )
+
+    controller.handle(
+        HandGestureEvent(
+            gesture=HandGesture.FIST,
+            position=canvas_position,
+        )
+    )
+
+    assert action_handler.current_stroke is not None
+
+    assert action_handler.current_stroke.points == [
+        canvas_position,
+    ]
+
+
+def test_controller_maps_screen_position_to_canvas_position_before_drawing():
+    canvas_mapper = CanvasCoordinateMapper(
+        screen_width=1920,
+        screen_height=1080,
+        margin_ratio=0.15,
+    )
+
+    action_handler = InteractionActionHandler()
+
+    controller = HandGestureController(
+        screen_width=1920,
+        screen_height=1080,
+        action_handler=action_handler,
+        canvas_coordinate_mapper=canvas_mapper,
+    )
+
+    screen_position = Point(
+        x=960.0,
+        y=540.0,
+    )
+
+    controller.handle(
+        HandGestureEvent(
+            gesture=HandGesture.FIST,
+            position=screen_position,
+        )
+    )
+
+    assert action_handler.current_stroke is not None
+
+    assert action_handler.current_stroke.points == [
+        Point(
+            x=672.0,
+            y=378.0,
+        ),
+    ]
+
+
+def test_controller_does_not_map_position_when_hand_is_outside_canvas():
+    class SpyCanvasCoordinateMapper:
+
+        def __init__(self):
+            self.received_positions = []
+
+        def map(self, position):
+            self.received_positions.append(
+                position
+            )
+
+            return Point(
+                x=999.0,
+                y=999.0,
+            )
+
+    canvas_mapper = SpyCanvasCoordinateMapper()
+
+    action_handler = InteractionActionHandler()
+
+    controller = HandGestureController(
+        screen_width=1920,
+        screen_height=1080,
+        action_handler=action_handler,
+        canvas_coordinate_mapper=canvas_mapper,
+    )
+
+    controller.handle(
+        HandGestureEvent(
+            gesture=HandGesture.FIST,
+            position=Point(
+                x=100.0,
+                y=540.0,
+            ),
+        )
+    )
+
+    assert controller.zone != InteractionZone.CANVAS
+
+    assert canvas_mapper.received_positions == []
+
+
+def test_open_gesture_finishes_stroke_when_position_is_present():
+    action_handler = InteractionActionHandler()
+
+    controller = HandGestureController(
+        screen_width=1920,
+        screen_height=1080,
+        action_handler=action_handler,
+    )
+
+    controller.handle(
+        HandGestureEvent(
+            gesture=HandGesture.FIST,
+            position=Point(
+                x=960.0,
+                y=540.0,
+            ),
+        )
+    )
+
+    assert action_handler.current_stroke is not None
+
+    controller.handle(
+        HandGestureEvent(
+            gesture=HandGesture.OPEN,
+            position=Point(
+                x=960.0,
+                y=540.0,
+            ),
+        )
+    )
+
+    assert action_handler.current_stroke is None
+    assert action_handler.is_drawing is False

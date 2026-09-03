@@ -20,6 +20,7 @@ class HandGestureController:
         action_resolver=None,
         action_handler=None,
         drawing_service=None,
+        canvas_coordinate_mapper=None,
     ):
         self.is_drawing = False
         self.mode = InteractionMode.IDLE
@@ -32,6 +33,9 @@ class HandGestureController:
         self.action_resolver = action_resolver or InteractionActionResolver()
         self.action_handler = action_handler
         self.drawing_service = drawing_service
+        self.canvas_coordinate_mapper = (
+            canvas_coordinate_mapper
+        )
 
         self.zone = InteractionZone.UNKNOWN
 
@@ -64,11 +68,22 @@ class HandGestureController:
                 event.position is not None
                 and self.action_handler is not None
             ):
-                self.action_handler.add_point(
-                    event.position
-                )
+                position = event.position
 
-        elif event.gesture == HandGesture.OPEN:
+                if (
+                    self.zone == InteractionZone.CANVAS
+                    and self.canvas_coordinate_mapper is not None
+                ):
+                    position = self.canvas_coordinate_mapper.map(
+                        position
+                    )
+
+                if position is not None:
+                    self.action_handler.add_point(
+                        position
+                    )
+
+        if event.gesture == HandGesture.OPEN:
             self.is_drawing = False
             self.mode = InteractionMode.IDLE
 

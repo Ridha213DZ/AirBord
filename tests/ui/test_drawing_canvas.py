@@ -371,3 +371,52 @@ def test_drawing_canvas_does_not_add_empty_stroke():
 
     assert canvas.current_stroke is None
     assert service.added_strokes == []
+
+
+def test_drawing_canvas_accepts_cursor_position():
+    app = QApplication.instance() or QApplication([])
+
+    canvas = DrawingCanvas()
+
+    position = Point(
+        x=150.0,
+        y=200.0,
+    )
+
+    canvas.set_cursor_position(position)
+
+    assert canvas.cursor_position == position
+
+
+# التحقق من أن لوحة الرسم تقوم برسم مؤشر اليد بصرياً عند تحديد موضعه
+def test_drawing_canvas_paints_cursor():
+    app = QApplication.instance() or QApplication([])
+
+    canvas = DrawingCanvas()
+    canvas.resize(100, 100)
+
+    canvas.set_cursor_position(
+        Point(
+            x=50.0,
+            y=50.0,
+        )
+    )
+
+    image = QImage(
+        100,
+        100,
+        QImage.Format_RGB32,
+    )
+    image.fill(0)
+
+    painter = QPainter(image)
+
+    try:
+        canvas.render(
+            painter,
+            canvas.rect().topLeft(),
+        )
+    finally:
+        painter.end()
+
+    assert image.pixelColor(50, 50) != image.pixelColor(0, 0)

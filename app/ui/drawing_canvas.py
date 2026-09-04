@@ -1,5 +1,5 @@
-from PySide6.QtCore import Qt
-from PySide6.QtGui import QPainter, QPen
+from PySide6.QtCore import QPointF, Qt
+from PySide6.QtGui import QBrush, QColor, QPainter, QPen
 from PySide6.QtWidgets import QWidget
 
 from app.application.services.drawing_service import DrawingService
@@ -18,52 +18,67 @@ class DrawingCanvas(QWidget):
 
         self.page: Page | None = None
         self.current_stroke: Stroke | None = None
+        self.cursor_position: Point | None = None
         self.drawing_service = drawing_service
 
     def set_page(self, page: Page) -> None:
         self.page = page
         self.update()
 
+    def set_cursor_position(self, position: Point | None) -> None:
+        self.cursor_position = position
+        self.update()
+
     def paintEvent(self, event) -> None:
         super().paintEvent(event)
 
-        if self.page is None:
-            return
-
         painter = QPainter(self)
 
-        for stroke in self.page.strokes:
-            if not stroke.points:
-                continue
+        if self.page is not None:
+            for stroke in self.page.strokes:
+                if not stroke.points:
+                    continue
 
-            pen = QPen()
-            pen.setColor(stroke.color)
-            pen.setWidthF(stroke.width)
+                pen = QPen()
+                pen.setColor(stroke.color)
+                pen.setWidthF(stroke.width)
 
-            painter.setPen(pen)
+                painter.setPen(pen)
 
-            if len(stroke.points) == 1:
-                point = stroke.points[0]
+                if len(stroke.points) == 1:
+                    point = stroke.points[0]
 
-                painter.drawPoint(
-                    point.x,
-                    point.y,
-                )
+                    painter.drawPoint(
+                        point.x,
+                        point.y,
+                    )
 
-                continue
+                    continue
 
-            for first, second in zip(
-                stroke.points,
-                stroke.points[1:],
-            ):
-                painter.drawLine(
-                    first.x,
-                    first.y,
-                    second.x,
-                    second.y,
-                )
+                for first, second in zip(
+                    stroke.points,
+                    stroke.points[1:],
+                ):
+                    painter.drawLine(
+                        first.x,
+                        first.y,
+                        second.x,
+                        second.y,
+                    )
 
-        painter.end()
+        if self.cursor_position is not None:
+            cursor_pen = QPen(QColor("#007ACC"))
+            cursor_pen.setWidth(2)
+            painter.setPen(cursor_pen)
+            painter.setBrush(QBrush(QColor("#007ACC")))
+            painter.drawEllipse(
+                QPointF(
+                    self.cursor_position.x,
+                    self.cursor_position.y,
+                ),
+                4.0,
+                4.0,
+            )
 
     def mousePressEvent(self, event) -> None:
         if event.button() != Qt.MouseButton.LeftButton:

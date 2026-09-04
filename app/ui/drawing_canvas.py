@@ -29,6 +29,45 @@ class DrawingCanvas(QWidget):
         self.cursor_position = position
         self.update()
 
+    def set_current_stroke(self, stroke: Stroke | None) -> None:
+        self.current_stroke = stroke
+        self.update()
+
+    def _draw_stroke(
+        self,
+        painter: QPainter,
+        stroke: Stroke,
+    ) -> None:
+        if not stroke.points:
+            return
+
+        pen = QPen()
+        pen.setColor(stroke.color)
+        pen.setWidthF(stroke.width)
+
+        painter.setPen(pen)
+
+        if len(stroke.points) == 1:
+            point = stroke.points[0]
+
+            painter.drawPoint(
+                point.x,
+                point.y,
+            )
+
+            return
+
+        for first, second in zip(
+            stroke.points,
+            stroke.points[1:],
+        ):
+            painter.drawLine(
+                first.x,
+                first.y,
+                second.x,
+                second.y,
+            )
+
     def paintEvent(self, event) -> None:
         super().paintEvent(event)
 
@@ -36,35 +75,16 @@ class DrawingCanvas(QWidget):
 
         if self.page is not None:
             for stroke in self.page.strokes:
-                if not stroke.points:
-                    continue
+                self._draw_stroke(
+                    painter,
+                    stroke,
+                )
 
-                pen = QPen()
-                pen.setColor(stroke.color)
-                pen.setWidthF(stroke.width)
-
-                painter.setPen(pen)
-
-                if len(stroke.points) == 1:
-                    point = stroke.points[0]
-
-                    painter.drawPoint(
-                        point.x,
-                        point.y,
-                    )
-
-                    continue
-
-                for first, second in zip(
-                    stroke.points,
-                    stroke.points[1:],
-                ):
-                    painter.drawLine(
-                        first.x,
-                        first.y,
-                        second.x,
-                        second.y,
-                    )
+        if self.current_stroke is not None:
+            self._draw_stroke(
+                painter,
+                self.current_stroke,
+            )
 
         if self.cursor_position is not None:
             cursor_pen = QPen(QColor("#007ACC"))

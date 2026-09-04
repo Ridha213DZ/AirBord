@@ -420,3 +420,45 @@ def test_drawing_canvas_paints_cursor():
         painter.end()
 
     assert image.pixelColor(50, 50) != image.pixelColor(0, 0)
+
+
+# التحقق من أن لوحة الرسم تعرض السكتة الجارية (current_stroke) آنياً أثناء الرسم
+def test_drawing_canvas_paints_current_stroke():
+    app = QApplication.instance() or QApplication([])
+
+    canvas = DrawingCanvas()
+    canvas.resize(100, 100)
+
+    stroke = Stroke(
+        color="#FF0000",
+        width=8.0,
+    )
+    stroke.add_point(
+        Point(
+            x=30.0,
+            y=30.0,
+        )
+    )
+
+    canvas.set_current_stroke(stroke)
+
+    assert canvas.current_stroke is stroke
+
+    image = QImage(
+        100,
+        100,
+        QImage.Format_RGB32,
+    )
+    image.fill(0)
+
+    painter = QPainter(image)
+
+    try:
+        canvas.render(
+            painter,
+            canvas.rect().topLeft(),
+        )
+    finally:
+        painter.end()
+
+    assert image.pixelColor(30, 30) != image.pixelColor(0, 0)
